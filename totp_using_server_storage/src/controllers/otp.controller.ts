@@ -1,14 +1,15 @@
 import { Request, Response } from "express";
 
 import crypto from "crypto";
+import { json } from "body-parser";
 
 // ----------------------------------------------------------------
 // globle valiables for storing the data
 
-
 let myData = [
   { data: { email: "", otp: "" }, expireAt: Math.floor(Date.now()) },
 ];
+
 
 async function autoDelete() {
   const interval = setInterval(function () {
@@ -17,9 +18,7 @@ async function autoDelete() {
         myData.shift();
       }
     }
-    // console.log("auto delete OTP data is On");
-    // console.log("number of stored items: " + myData.length);
-  }, 1000);
+  }, 100);
 }
 
 autoDelete();
@@ -50,35 +49,44 @@ function decrypt(text: any) {
 
 // ----------------------------------------------------------------
 
+
 // controller to create secret key and send/resend otp to provided email address and responsding QR code URL
 export const createOtp = async (req: Request, res: Response) => {
   try {
-
-
     const { email, phone } = req.body;
-
-
 
     const otpCreateAlgo = (length: number) => {
       let timeInMilliSecond = String(Date.now());
-      let otp = "";
-      let i = 0;
-      let j = timeInMilliSecond.length - 1;
-      let count = length;
-      while (count > 0) {
-        otp += timeInMilliSecond[j];
-        j--;
-        count--;
-        if (count > 0) {
-          otp += Math.floor(Number(timeInMilliSecond[i])/2);
-          i++;
-          count--;
+      let last_digits = "";
+      let i = timeInMilliSecond.length - 1;
+      let stringLength = length;
+      while (length  !=1) {
+        last_digits += timeInMilliSecond[i];
+        i--;
+        length--;
+      }
+      let addingElements = "";
+      for (let j = 5; j < 9; j++) {
+        addingElements += timeInMilliSecond[j];
+        let addMore= Number(addingElements)-j
+        addingElements=String(addMore)
+      }
+
+      let otp_number = Number(last_digits) * 8 + Number(addingElements)-1;
+
+      let otp = String(otp_number);
+      console.log(otp.length);
+      console.log(length);
+      if (otp.length < stringLength) {
+        while (otp.length < stringLength) {
+          otp += "6";
         }
       }
-      return otp;
+
+      return String(otp);
     };
 
-    const lengthOfOtp=6
+    const lengthOfOtp = 6;
     const otp = otpCreateAlgo(lengthOfOtp);
 
     myData.push({
@@ -86,8 +94,7 @@ export const createOtp = async (req: Request, res: Response) => {
       expireAt: Math.floor(Date.now() + 60000),
     });
 
- 
-
+    
     // Email sending otptions
     const mailOptionsSender = {
       to: email,
@@ -106,7 +113,6 @@ export const createOtp = async (req: Request, res: Response) => {
       Message:
         "OTP is successfully sent to provided Email/phone and QR code generated",
     });
-    return;
   } catch {
     res.status(400).send({
       success: false,
@@ -117,6 +123,8 @@ export const createOtp = async (req: Request, res: Response) => {
     });
   }
 };
+
+
 
 // controller to validate OTP
 export const validateOtp = async (req: Request, res: Response) => {
@@ -156,7 +164,7 @@ export const validateOtp = async (req: Request, res: Response) => {
       Message: "OTP verified successfully",
     });
 
-    console.log(myData);
+    
   } catch {
     res.status(400).send({
       success: false,
