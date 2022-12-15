@@ -45,7 +45,9 @@ function decrypt(text: any) {
   return decrypted.toString();
 }
 
-// const enct = encrypt("1");
+const enct = encrypt("1");
+
+
 
 // ----------------------------------------------------------------
 
