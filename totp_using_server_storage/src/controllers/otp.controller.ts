@@ -2,14 +2,16 @@ import { Request, Response } from "express";
 
 import crypto from "crypto";
 import { json } from "body-parser";
+import { sha256 } from "js-sha256";
+import jwt, { TokenExpiredError } from "jsonwebtoken";
+import crc32 from "crc-32";
 
 // ----------------------------------------------------------------
 // globle valiables for storing the data
 
 let myData = [
-  { data: { email: "", otp: "" }, expireAt: Math.floor(Date.now()) },
+  { data: { email: "", encryptedOtp: "" }, expireAt: Math.floor(Date.now()) },
 ];
-
 
 async function autoDelete() {
   const interval = setInterval(function () {
@@ -22,18 +24,19 @@ async function autoDelete() {
 }
 
 autoDelete();
-// ----------------------------------------------------------------
+// ---------End of autoDelete------------------------------------------------
 
-// ----------------------------------------------------------------
+// ---------AES - 128 - CBC Encryption---------------------------------
 const algorithm = "aes-256-cbc";
 const key = crypto.randomBytes(32);
 const iv = crypto.randomBytes(16);
 
-function encrypt(text: any) {
+function aes_256_encrypt(text: string) {
   let cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
   let encrypted = cipher.update(text);
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
+  return encrypted.toString("hex");
+  // return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
 }
 
 function decrypt(text: any) {
@@ -44,59 +47,50 @@ function decrypt(text: any) {
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return decrypted.toString();
 }
+// ----------end of AES - 128 - CBC Encryption-------------------------------
 
-const enct = encrypt("1");
+// --------SHA-256 Encryption---------------------------------
+function sha256_encrypt(text: string) {
+  return sha256(text);
+}
+// -------end of SHA-256 Encryption--------------------------------
 
-
-
-// ----------------------------------------------------------------
 
 
 // controller to create secret key and send/resend otp to provided email address and responsding QR code URL
 export const createOtp = async (req: Request, res: Response) => {
   try {
-    const { email, phone } = req.body;
-
+    const { email } = req.body;
+     let timestamp="";
     const otpCreateAlgo = (length: number) => {
-      let timeInMilliSecond = String(Date.now());
-      let last_digits = "";
-      let i = timeInMilliSecond.length - 1;
-      let stringLength = length;
-      while (length  !=1) {
-        last_digits += timeInMilliSecond[i];
-        i--;
-        length--;
-      }
-      let addingElements = "";
-      for (let j = 5; j < 9; j++) {
-        addingElements += timeInMilliSecond[j];
-        let addMore= Number(addingElements)-j
-        addingElements=String(addMore)
-      }
+      timestamp=String(Date.now())
+      let payload = email+timestamp
+      console.log({payload})
+      let token = sha256_encrypt(aes_256_encrypt(payload));
+      //  console.log({token});
+      let otp = "";
 
-      let otp_number = Number(last_digits) * 8 + Number(addingElements)-1;
-
-      let otp = String(otp_number);
-      console.log(otp.length);
-      console.log(length);
-      if (otp.length < stringLength) {
-        while (otp.length < stringLength) {
-          otp += "6";
+      for (let i = 0; i < token.length; i++) {
+        if (Number(token[i])) {
+          if (otp.length == length) {
+            return otp;
+          }
+          otp += token[i];
         }
       }
 
-      return String(otp);
+      return otp;
     };
-
     const lengthOfOtp = 6;
-    const otp = otpCreateAlgo(lengthOfOtp);
-
-    myData.push({
-      data: { email: email, otp: otp },
-      expireAt: Math.floor(Date.now() + 60000),
-    });
-
+    let otp = otpCreateAlgo(lengthOfOtp);
     
+
+ 
+
+    // myData.push({
+    //   data: { email: email, encryptedOtp: encryptedOtp },
+    //   expireAt: Math.floor(Date.now() + 60000),
+    // });
     // Email sending otptions
     const mailOptionsSender = {
       to: email,
@@ -110,6 +104,7 @@ export const createOtp = async (req: Request, res: Response) => {
     res.status(201).send({
       success: true,
       statusCode: 200,
+      timestamp:timestamp,
       otp: otp,
       TraceID: Date.now(),
       Message:
@@ -126,47 +121,72 @@ export const createOtp = async (req: Request, res: Response) => {
   }
 };
 
-
-
 // controller to validate OTP
 export const validateOtp = async (req: Request, res: Response) => {
   try {
     const email = req.body.email;
+    const timestamp = req.body.timestamp;
+    const enteredOtp= req.body.otp
 
-    const otp = req.body.otp;
+  
+    
 
-    console.info("get secretKey form database for verification:", Date.now());
 
-    console.info("otp verification prosess done :", Date.now());
+    if((Date.now() - timestamp)>60000){
+      res.status(400).send(
+        {
 
-    const otpValidation = () => {
-      for (let i = 0; i < myData.length; i++) {
-        if (myData[i].data.otp == otp) {
-          myData.splice(i, 1);
-          return true;
+          success:false,
+          message:"invalid otp due to timestamp"
         }
-      }
-    };
-
-    if (!otpValidation()) {
-      res.status(400).send({
-        success: false,
-        StatusCode: 400,
-        TraceID: Date.now(),
-        Message: "OTP is invalid",
-      });
-
-      return;
+      )
+      return
     }
 
-    res.status(200).send({
-      success: true,
-      StatusCode: 200,
-      TraceID: Date.now(),
-      Message: "OTP verified successfully",
-    });
+    const otpCreateAlgo = (length: number) => {
+      let payload = email + timestamp;
+      console.log({payload})
+      let token = sha256_encrypt(aes_256_encrypt(payload));
+      // console.log({token});
+      let otp = "";
 
-    
+      for (let i = 0; i < token.length; i++) {
+        if (Number(token[i])) {
+          if (otp.length == length) {
+            return otp;
+          }
+
+          otp += token[i];
+        }
+      }
+
+      return otp;
+    };
+
+    const lengthOfOtp = 6;
+    let otp = otpCreateAlgo(lengthOfOtp);
+
+if(otp==enteredOtp)
+{
+  res.status(200).send({
+    success: true,
+    StatusCode: 200,
+    TraceID: Date.now(),
+    Message: "OTP verified successfully",
+  });
+  return
+}
+res.status(400).send(
+  {
+    success:false,
+    message:"invalid otp ",
+    enteredOtp:enteredOtp,
+    timestamp:timestamp,
+    otp:otp
+
+  }
+)
+  
   } catch {
     res.status(400).send({
       success: false,
