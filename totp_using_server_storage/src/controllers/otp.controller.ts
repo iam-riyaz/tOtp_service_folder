@@ -129,9 +129,6 @@ export const validateOtp = async (req: Request, res: Response) => {
     const enteredOtp= req.body.otp
 
   
-    
-
-
     if((Date.now() - timestamp)>60000){
       res.status(400).send(
         {
