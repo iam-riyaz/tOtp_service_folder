@@ -14,11 +14,15 @@ const port = process.env.PORT || 2001;
 
 const app= createServer() 
 
+// to set the view engine
+app.set('view engine','hbs');
+
 app.use("/v1/otp", otpRouter);
 
+// template engine route
 app.get("/",(req,res) => {
 
-res.send("server is running");
+res.render("index",{name:"riyaz","service_name":"riyaz.com",})
 })
 
 

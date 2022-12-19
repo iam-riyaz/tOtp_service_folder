@@ -5,6 +5,7 @@ import { json } from "body-parser";
 import { sha256 } from "js-sha256";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
 import crc32 from "crc-32";
+import { mailSenderFunction } from "../config/mail";
 
 // ----------------------------------------------------------------
 // globle valiables for storing the data
@@ -39,7 +40,7 @@ function aes_256_encrypt(text: string) {
   // return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
 }
 
-function decrypt(text: any) {
+function aes_256_decrypt(text: any) {
   let iv = Buffer.from(text.iv, "hex");
   let encryptedText = Buffer.from(text.encryptedData, "hex");
   let decipher = crypto.createDecipheriv(algorithm, Buffer.from(key), iv);
@@ -48,6 +49,7 @@ function decrypt(text: any) {
   return decrypted.toString();
 }
 // ----------end of AES - 128 - CBC Encryption-------------------------------
+
 
 // --------SHA-256 Encryption---------------------------------
 function sha256_encrypt(text: string) {
@@ -60,16 +62,18 @@ function sha256_encrypt(text: string) {
 // controller to create secret key and send/resend otp to provided email address and responsding QR code URL
 export const createOtp = async (req: Request, res: Response) => {
   try {
+
+
     const { email } = req.body;
      let timestamp="";
+    
+    //  otp Generater function 
     const otpCreateAlgo = (length: number) => {
       timestamp=String(Date.now())
       let payload = email+timestamp
       console.log({payload})
       let token = sha256_encrypt(aes_256_encrypt(payload));
-      //  console.log({token});
       let otp = "";
-
       for (let i = 0; i < token.length; i++) {
         if (Number(token[i])) {
           if (otp.length == length) {
@@ -78,28 +82,26 @@ export const createOtp = async (req: Request, res: Response) => {
           otp += token[i];
         }
       }
-
       return otp;
     };
+
+    // Input for Length of OTP 
     const lengthOfOtp = 6;
     let otp = otpCreateAlgo(lengthOfOtp);
     
 
- 
 
-    // myData.push({
-    //   data: { email: email, encryptedOtp: encryptedOtp },
-    //   expireAt: Math.floor(Date.now() + 60000),
-    // });
-    // Email sending otptions
     const mailOptionsSender = {
       to: email,
       subject: `OTP for email verification ${email}`,
       otp: `your OTP is: ${otp} and valid for 30 seconds only`,
     };
 
-    // mailSenderFunction(mailOptionsSender);          //email sending function
+     //email sending function
+  // mailSenderFunction(mailOptionsSender);      
     console.info("OTP sent to Email:", Date.now());
+
+    
 
     res.status(201).send({
       success: true,
@@ -132,36 +134,32 @@ export const validateOtp = async (req: Request, res: Response) => {
     if((Date.now() - timestamp)>60000){
       res.status(400).send(
         {
-
           success:false,
-          message:"invalid otp due to timestamp"
+          message:"OTP is Expired",
         }
       )
       return
     }
 
-    const otpCreateAlgo = (length: number) => {
+    const otpCreateForToValidate = (length: number) => {
       let payload = email + timestamp;
       console.log({payload})
       let token = sha256_encrypt(aes_256_encrypt(payload));
-      // console.log({token});
       let otp = "";
-
       for (let i = 0; i < token.length; i++) {
         if (Number(token[i])) {
           if (otp.length == length) {
             return otp;
           }
-
           otp += token[i];
         }
       }
-
       return otp;
     };
 
+    // lenght of otp 
     const lengthOfOtp = 6;
-    let otp = otpCreateAlgo(lengthOfOtp);
+    let otp = otpCreateForToValidate(lengthOfOtp);
 
 if(otp==enteredOtp)
 {
@@ -176,7 +174,7 @@ if(otp==enteredOtp)
 res.status(400).send(
   {
     success:false,
-    message:"invalid otp ",
+    message:"Invalid otp ",
     enteredOtp:enteredOtp,
     timestamp:timestamp,
     otp:otp
