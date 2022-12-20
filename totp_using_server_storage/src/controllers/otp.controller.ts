@@ -1,31 +1,10 @@
 import { Request, Response } from "express";
 
 import crypto from "crypto";
-import { json } from "body-parser";
 import { sha256 } from "js-sha256";
-import jwt, { TokenExpiredError } from "jsonwebtoken";
-import crc32 from "crc-32";
-import { mailSenderFunction } from "../config/mail";
+import { transporter } from "../config/mail";
 
-// ----------------------------------------------------------------
-// globle valiables for storing the data
 
-let myData = [
-  { data: { email: "", encryptedOtp: "" }, expireAt: Math.floor(Date.now()) },
-];
-
-async function autoDelete() {
-  const interval = setInterval(function () {
-    for (const element of myData) {
-      if (element.expireAt <= Date.now()) {
-        myData.shift();
-      }
-    }
-  }, 100);
-}
-
-autoDelete();
-// ---------End of autoDelete------------------------------------------------
 
 // ---------AES - 128 - CBC Encryption---------------------------------
 const algorithm = "aes-256-cbc";
@@ -39,7 +18,6 @@ function aes_256_encrypt(text: string) {
   return encrypted.toString("hex");
   // return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
 }
-
 function aes_256_decrypt(text: any) {
   let iv = Buffer.from(text.iv, "hex");
   let encryptedText = Buffer.from(text.encryptedData, "hex");
@@ -62,8 +40,6 @@ function sha256_encrypt(text: string) {
 // controller to create secret key and send/resend otp to provided email address and responsding QR code URL
 export const createOtp = async (req: Request, res: Response) => {
   try {
-
-
     const { email } = req.body;
      let timestamp="";
     
@@ -89,16 +65,28 @@ export const createOtp = async (req: Request, res: Response) => {
     const lengthOfOtp = 6;
     let otp = otpCreateAlgo(lengthOfOtp);
     
-
-
-    const mailOptionsSender = {
+    // Email sending variabls , provide all details, 
+    // to whome the email will send what will be dynamic inputs for email
+    var emailSendingOptions = {
+      from: 'riyaz"s TOTP service',
       to: email,
-      subject: `OTP for email verification ${email}`,
-      otp: `your OTP is: ${otp} and valid for 30 seconds only`,
+      subject: 'Test',
+      template: 'index',
+      context: {
+           email:email,
+          otp:otp
+      }
+   }
+     //email sending function
+    const mailSenderFunction = async () => {
+      await transporter.sendMail(emailSendingOptions);
     };
 
-     //email sending function
-  // mailSenderFunction(mailOptionsSender);      
+    // calling this function will execute email sending process
+    mailSenderFunction()
+
+
+    
     console.info("OTP sent to Email:", Date.now());
 
     
