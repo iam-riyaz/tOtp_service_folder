@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/iam-riyaz/tOtp_service#readme",
   "devDependencies": {
+    "@types/cors": "^2.8.13",
     "@types/express-session": "^1.17.5",
     "@types/nodemailer-express-handlebars": "^4.0.2",
     "@types/supertest": "^2.0.12",
@@ -46,6 +47,7 @@
     "base32-encode": "^2.0.0",
     "body-parser": "^1.20.1",
     "celebrate": "^15.0.1",
+    "cors": "^2.8.5",
     "crc-32": "^1.2.2",
     "crypto": "^1.0.1",
     "crypto-js": "^4.1.1",
