@@ -40,6 +40,8 @@ function sha256_encrypt(text: string) {
 // controller to create secret key and send/resend otp to provided email address and responsding QR code URL
 export const createOtp = async (req: Request, res: Response) => {
   try {
+
+    
     const { email } = req.body;
      let timestamp="";
     
@@ -85,12 +87,6 @@ export const createOtp = async (req: Request, res: Response) => {
     // calling this function will execute email sending process
     mailSenderFunction()
 
-
-    
-    console.info("OTP sent to Email:", Date.now());
-
-    
-
     res.status(201).send({
       success: true,
       statusCode: 200,
@@ -114,21 +110,29 @@ export const createOtp = async (req: Request, res: Response) => {
 // controller to validate OTP
 export const validateOtp = async (req: Request, res: Response) => {
   try {
+
+    // extract data from request body
     const email = req.body.email;
     const timestamp = req.body.timestamp;
     const enteredOtp= req.body.otp
 
-  
+  // check if OTP is expired of not , 60000 is showing 60000 miliseconds
+  //  which is equivalent ot 1 minute so this otp will  expiring after 1 minute
     if((Date.now() - timestamp)>60000){
       res.status(400).send(
         {
           success:false,
-          message:"OTP is Expired",
+          statusCode:400,
+          TraceID: Date.now(),
+          message:"Expired otp "
+      
         }
       )
       return
     }
 
+
+    // to check if OTP is valid or not we need to again cerate otp using same prosess as above
     const otpCreateForToValidate = (length: number) => {
       let payload = email + timestamp;
       console.log({payload})
@@ -144,7 +148,7 @@ export const validateOtp = async (req: Request, res: Response) => {
       }
       return otp;
     };
-    
+
 
     // lenght of otp 
     const lengthOfOtp = 6;
@@ -163,10 +167,9 @@ if(otp==enteredOtp)
 res.status(400).send(
   {
     success:false,
-    message:"Invalid otp ",
-    enteredOtp:enteredOtp,
-    timestamp:timestamp,
-    otp:otp
+    statusCode:400,
+    TraceID: Date.now(),
+    message:"Invalid otp "
 
   }
 )
