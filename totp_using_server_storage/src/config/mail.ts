@@ -1,9 +1,6 @@
 import { Context } from "liquidjs";
 import nodemailer from "nodemailer";
-
 import hbs from "nodemailer-express-handlebars";
-// import path from "path";
-// import { patch } from "superagent";
 
 // SMTP sender config details
 export const transporter = nodemailer.createTransport({
@@ -14,29 +11,6 @@ export const transporter = nodemailer.createTransport({
     pass: "", //write in-app password of the Email  Address
   },
 });
-
-// // interfase for Mail sending
-// export interface mailOptionsSenderType {
-//   from: string;
-//   to: string;
-//   subject: string;
-//   otp: string;
-// }
-
-// // mail sending fucntion declaration this function will  be
-// // called with mailOptionsSenderType when mail needs to ve send
-// export const mailSenderFunction = async (
-//   mailOptionsSender: mailOptionsSenderType
-// ) => {
-//   await transporter.sendMail({
-//     from: mailOptionsSender.from,
-//     to: mailOptionsSender.to,
-//     subject: mailOptionsSender.subject,
-//     text: mailOptionsSender.otp,
-//   });
-// };
-
-
 
 var options = {
   viewEngine : {
@@ -49,9 +23,9 @@ var options = {
   extName: '.hbs'
   };
 
-
 //attach the plugin to the nodemailer transporter
 transporter.use('compile', hbs(options));
+
 //send mail with options
 var mail = {
    from: 'from@domain.com',
@@ -62,7 +36,6 @@ var mail = {
        name: 'Name is riyaz'
    }
 }
-
 
 export const mailSenderFunction = async () => {
     await transporter.sendMail(mail);

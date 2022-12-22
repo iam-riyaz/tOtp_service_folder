@@ -6,8 +6,6 @@ export const connectDB= async ()=>{
         console.log(`mongoDB connected to port ${conn.connection.port}`);
     }
     catch(err:any){
-        // console.log(process.env.MONGO_URI)
-        // console.log(`{error:${err.message}}`)
         process.exit()
     }
 }
