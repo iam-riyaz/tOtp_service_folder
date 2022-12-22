@@ -144,6 +144,7 @@ export const validateOtp = async (req: Request, res: Response) => {
       }
       return otp;
     };
+    
 
     // lenght of otp 
     const lengthOfOtp = 6;
