@@ -72,7 +72,7 @@ export const createOtp = async (req: Request, res: Response) => {
     var emailSendingOptions = {
       from: 'riyaz"s TOTP service',
       to: email,
-      subject: 'Test',
+      subject: 'OTP verification',
       template: 'index',
       context: {
            email:email,
