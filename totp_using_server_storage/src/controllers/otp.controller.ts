@@ -6,6 +6,7 @@ import { transporter } from "../config/mail";
 
 
 
+
 // ---------AES - 128 - CBC Encryption---------------------------------
 const algorithm = "aes-256-cbc";
 const key = crypto.randomBytes(32);
@@ -91,6 +92,7 @@ export const createOtp = async (req: Request, res: Response) => {
       success: true,
       statusCode: 200,
       timestamp:timestamp,
+      email:email,
       otp: otp,
       TraceID: Date.now(),
       Message:
@@ -110,6 +112,9 @@ export const createOtp = async (req: Request, res: Response) => {
 // controller to validate OTP
 export const validateOtp = async (req: Request, res: Response) => {
   try {
+
+    
+    
 
     // extract data from request body
     const email = req.body.email;

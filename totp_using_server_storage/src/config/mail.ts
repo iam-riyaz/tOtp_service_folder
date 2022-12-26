@@ -8,7 +8,7 @@ export const transporter = nodemailer.createTransport({
   port: 465,
   auth: {
     user: "riyazahmad.online@gmail.com", // give email address form which we wanna send all mail to user
-    pass: "ntexmyhpuijearvd", //write in-app password of the Email  Address
+    pass: "", //write in-app password of the Email  Address
   },
 });
 
