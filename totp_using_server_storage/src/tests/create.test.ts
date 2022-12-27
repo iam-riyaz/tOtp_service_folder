@@ -3,18 +3,15 @@ import { response } from "express";
 import request from "superagent";
 import supertest from "supertest";
 import { app } from "../app";
-import  {createServer} from "../utils/server"
-
-
-
-
+import { createServer } from "../utils/server";
 
 describe("Create OTP and Resend otp ", () => {
-   
-    it("It should return response code 200 ", async()=>{
-       const res= await  supertest(app).post("/v1/otp/createOtp").send({email:"riyaz@abc.com",phone:86869986})
+  it("It should return response code 200 ", async () => {
+    const res = await supertest(app)
+      .post("/v1/otp/createOtp")
 
-       expect(res.statusCode).toEqual(200)
-    })
-    
-  }); 
+      .send({ email: "riyaz@abc.com", phone: 86869986 });
+
+    expect(res.statusCode).toEqual(200);
+  });
+});

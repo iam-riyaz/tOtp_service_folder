@@ -35,11 +35,11 @@ app.use(errors());
 
 
 
-// connectDB().then(() => {
+connectDB().then(() => {
   
   app.listen(port, () => {
     console.log(`listioning on port ${port}`);
   });
-// });
+});
 
 export {app}
