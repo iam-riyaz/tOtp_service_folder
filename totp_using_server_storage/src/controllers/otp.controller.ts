@@ -1,104 +1,89 @@
 import { Request, Response } from "express";
-
 import crypto from "crypto";
 import { sha256 } from "js-sha256";
 import { transporter } from "../config/mail";
 
-
-
-
-// ---------AES - 128 - CBC Encryption---------------------------------
+// ----AES - 128 - CBC Encryption---
 const algorithm = "aes-256-cbc";
 const key = crypto.randomBytes(32);
 const iv = crypto.randomBytes(16);
-
 function aes_256_encrypt(text: string) {
   let cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
   let encrypted = cipher.update(text);
   encrypted = Buffer.concat([encrypted, cipher.final()]);
   return encrypted.toString("hex");
-  // return { iv: iv.toString("hex"), encryptedData: encrypted.toString("hex") };
 }
-function aes_256_decrypt(text: any) {
-  let iv = Buffer.from(text.iv, "hex");
-  let encryptedText = Buffer.from(text.encryptedData, "hex");
-  let decipher = crypto.createDecipheriv(algorithm, Buffer.from(key), iv);
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  return decrypted.toString();
-}
-// ----------end of AES - 128 - CBC Encryption-------------------------------
 
-
-// --------SHA-256 Encryption---------------------------------
+// --------SHA-256 Encryption----------
 function sha256_encrypt(text: string) {
   return sha256(text);
 }
-// -------end of SHA-256 Encryption--------------------------------
 
-
-
-// controller to create secret key and send/resend otp to provided email address and responsding QR code URL
+/*
+Controller to CREATE OTP and SEND to provided EMAIL address.
+A Valid Email Address and 10 DIGIT PHONE is required in REQUEST BODY to 
+Else validation error will be thrown to the client
+*/
 export const createOtp = async (req: Request, res: Response) => {
   try {
-
-    
+    // getting email address from request body
     const { email } = req.body;
-     let timestamp="";
-    
-    //  otp Generater function 
-    const otpCreateAlgo = (length: number) => {
-      timestamp=String(Date.now())
-      let payload = email+timestamp
-      console.log({payload})
-      let token = sha256_encrypt(aes_256_encrypt(payload));
-      let otp = "";
-      for (let i = 0; i < token.length; i++) {
-        if (Number(token[i])) {
-          if (otp.length == length) {
-            return otp;
-          }
-          otp += token[i];
+
+    const timestamp = String(Date.now());
+
+    //create unique key using email and current timestamp
+    const payload = email + timestamp;
+
+    //encrypt unique key using two encrpytion methods
+    const token = sha256_encrypt(aes_256_encrypt(payload));
+    const tokenSplitedArray = token.split("");
+
+    // Input for Length of OTP
+    const lengthOfOtp = 6;
+
+    // create OTP USING our own algorithm
+    let otp = tokenSplitedArray
+      .map((e) => {
+        if (Number(e)) {
+          return e;
         }
-      }
-      return otp;
+      })
+      .join("");
+    otp = otp.slice(0, lengthOfOtp);
+
+    // Email sending variabls some field are required and some are optional
+    const emailSendingOptions = {
+      from: 'riyaz"s TOTP service', //optional
+      to: email, //required
+      subject: "OTP verification", //optional
+      template: "index", //required
+      context: {
+        email: email, //required
+        otp: otp, //required
+      },
     };
 
-    // Input for Length of OTP 
-    const lengthOfOtp = 6;
-    let otp = otpCreateAlgo(lengthOfOtp);
-    
-    // Email sending variabls , provide all details, 
-    // to whome the email will send what will be dynamic inputs for email
-    var emailSendingOptions = {
-      from: 'riyaz"s TOTP service',
-      to: email,
-      subject: 'OTP verification',
-      template: 'index',
-      context: {
-           email:email,
-          otp:otp
-      }
-   }
-     //email sending function
+    //email sending function
     const mailSenderFunction = async () => {
       await transporter.sendMail(emailSendingOptions);
     };
 
     // calling this function will execute email sending process
-    mailSenderFunction()
+    mailSenderFunction();
 
+    // sending SUCCESS response to the client
     res.status(201).send({
       success: true,
       statusCode: 200,
-      timestamp:timestamp,
-      email:email,
+      timestamp: timestamp,
+      email: email,
       otp: otp,
       TraceID: Date.now(),
       Message:
         "OTP is successfully sent to provided Email/phone and QR code generated",
     });
   } catch {
+    // sending ERROR response to the client
     res.status(400).send({
       success: false,
       statusCode: 400,
@@ -109,77 +94,78 @@ export const createOtp = async (req: Request, res: Response) => {
   }
 };
 
-// controller to validate OTP
+// Controller to VALIDATE OTP
 export const validateOtp = async (req: Request, res: Response) => {
   try {
-
-    
-    
-
     // extract data from request body
-    const email = req.body.email;
-    const timestamp = req.body.timestamp;
-    const enteredOtp= req.body.otp
+    const email = req.body.email; //required
 
-  // check if OTP is expired of not , 60000 is showing 60000 miliseconds
-  //  which is equivalent ot 1 minute so this otp will  expiring after 1 minute
-    if((Date.now() - timestamp)>60000){
-      res.status(400).send(
-        {
-          success:false,
-          statusCode:400,
-          TraceID: Date.now(),
-          message:"Expired otp "
+    // this timestamp shuld be save value as createOtp controller response timestamp value
+    const timestamp = req.body.timestamp; //required
+
+    const enteredOtp = req.body.otp; //required
+
+    // OTP Will be expired in 1 minute or 60000 milliseconds
+    const expireInMilliseconds = 60000;
+
+    // check if OTP is expired of not , 60000 is showing 60000 miliseconds
+    //  which is equivalent ot 1 minute so this otp will  expiring after 1 minute
+    if (Date.now() - timestamp > expireInMilliseconds) {
       
-        }
-      )
-      return
+    // sending ERROR response to the client
+      res.status(400).send({
+        success: false,
+        statusCode: 400,
+        TraceID: Date.now(),
+        message: "Expired otp ",
+      });
+      return;
     }
 
+    // to check if OTP is valid or not so, we need to again cerate otp using same prosess as above
 
-    // to check if OTP is valid or not we need to again cerate otp using same prosess as above
-    const otpCreateForToValidate = (length: number) => {
-      let payload = email + timestamp;
-      console.log({payload})
-      let token = sha256_encrypt(aes_256_encrypt(payload));
-      let otp = "";
-      for (let i = 0; i < token.length; i++) {
-        if (Number(token[i])) {
-          if (otp.length == length) {
-            return otp;
-          }
-          otp += token[i];
-        }
-      }
-      return otp;
-    };
+    //create unique key using email and current timestamp
+    let payload = email + timestamp;
 
+    //encrypt unique key using two encrpytion methods
+    let token = sha256_encrypt(aes_256_encrypt(payload));
+    let tokenSplitedArray = token.split("");
 
-    // lenght of otp 
+    // Input for Length of OTP
     const lengthOfOtp = 6;
-    let otp = otpCreateForToValidate(lengthOfOtp);
 
-if(otp==enteredOtp)
-{
-  res.status(200).send({
-    success: true,
-    StatusCode: 200,
-    TraceID: Date.now(),
-    Message: "OTP verified successfully",
-  });
-  return
-}
-res.status(400).send(
-  {
-    success:false,
-    statusCode:400,
-    TraceID: Date.now(),
-    message:"Invalid otp "
+    // create OTP USING our own algorithm
+    let otp = tokenSplitedArray
+      .map((e) => {
+        if (Number(e)) {
+          return e;
+        }
+      })
+      .join("");
+    otp = otp.slice(0, lengthOfOtp);
 
-  }
-)
-  
+    // comparing reacted-OTP and enteredOtp
+    if (otp == enteredOtp) {
+      
+    // sending SUCCESS response to the client
+      res.status(200).send({
+        success: true,
+        StatusCode: 200,
+        TraceID: Date.now(),
+        Message: "OTP verified successfully",
+      });
+      return;
+    }
+
+    // sending ERROR response to the client
+    res.status(400).send({
+      success: false,
+      statusCode: 400,
+      TraceID: Date.now(),
+      message: "Invalid otp ",
+    });
   } catch {
+    // sending ERROR response to the client
     res.status(400).send({
       success: false,
       statusCode: 400,

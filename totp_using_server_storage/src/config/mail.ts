@@ -44,18 +44,4 @@ var options = {
 //attach the plugin to the nodemailer transporter
 transporter.use("compile", hbs(options));
 
-//send mail with options
-var mail = {
-  from: "from@domain.com",
-  to: "riyazahmad.online@gmail.com",
-  subject: "Test",
-  template: "index",
-  context: {
-    name: "Name is riyaz",
-  },
-};
 
-// calling this function will send the email by passing the Mail object in .sendMail() method
-export const mailSenderFunction = async () => {
-  await transporter.sendMail(mail);
-};

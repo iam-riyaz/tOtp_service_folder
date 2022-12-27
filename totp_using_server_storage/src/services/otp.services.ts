@@ -2,7 +2,7 @@ import { ITempUserData } from "../models/tempUserData.model";
 
 import { TempUserDataMongo } from "../schema/tempUserData.schema";
 
-// this service will write user data in database 
+// this service will write user data in database
 export const createOtp = async (tempUserData: ITempUserData) => {
   const tempData = new TempUserDataMongo({
     ...tempUserData,
@@ -16,11 +16,11 @@ export const ifEmailExists = async (email: string) => {
   const existOrNot = await TempUserDataMongo.findOne({ email });
 
   const userEmail = existOrNot?.email || "";
-    if (userEmail === email) {
-      return true;
-    }
+  if (userEmail === email) {
+    return true;
+  }
 
-    return false;
+  return false;
 };
 
 // this service will return single user data object from database find by Email
@@ -29,7 +29,6 @@ export const validateOtp = async (email: string) => {
 
   return data;
 };
-
 
 // this service will check whether user already verified ot not
 export const checkFlag = async (email: string) => {
