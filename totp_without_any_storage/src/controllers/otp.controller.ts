@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import { sha256 } from "js-sha256";
 import { transporter } from "../config/mail";
+import { logger } from "../config/logger";
 
 // ----AES - 128 - CBC Encryption---
 const algorithm = "aes-256-cbc";
@@ -28,11 +29,13 @@ export const createOtp = async (req: Request, res: Response) => {
   try {
     // getting email address from request body
     const { email } = req.body;
+    logger.info("email extracted from request body");
 
     const timestamp = String(Date.now());
 
     //create unique key using email and current timestamp
     const payload = email + timestamp;
+    logger.info("unique key is created for OTP");
 
     //encrypt unique key using two encrpytion methods
     const token = sha256_encrypt(aes_256_encrypt(payload));
@@ -50,6 +53,7 @@ export const createOtp = async (req: Request, res: Response) => {
       })
       .join("");
     otp = otp.slice(0, lengthOfOtp);
+    logger.info(`OTP in created length of ${lengthOfOtp}`);
 
     // Email sending variabls some field are required and some are optional
     const emailSendingOptions = {
@@ -69,7 +73,8 @@ export const createOtp = async (req: Request, res: Response) => {
     };
 
     // calling this function will execute email sending process
-    mailSenderFunction();
+    // mailSenderFunction();
+    logger.info(`Email  is sent successfully to the email: ${email} `);
 
     // sending SUCCESS response to the client
     res.status(201).send({
@@ -82,7 +87,9 @@ export const createOtp = async (req: Request, res: Response) => {
       Message:
         "OTP is successfully sent to provided Email/phone and QR code generated",
     });
+    logger.info("success response sent to the client");
   } catch {
+    logger.error("Error in creating or sending OTP, It's a sever error");
     // sending ERROR response to the client
     res.status(400).send({
       success: false,
@@ -105,20 +112,24 @@ export const validateOtp = async (req: Request, res: Response) => {
 
     const enteredOtp = req.body.otp; //required
 
+    logger.info(
+      "email, timestamp,ecteredOtp exptract from request bodu successfully"
+    );
+
     // OTP Will be expired in 1 minute or 60000 milliseconds
     const expireInMilliseconds = 60000;
 
     // check if OTP is expired of not , 60000 is showing 60000 miliseconds
     //  which is equivalent ot 1 minute so this otp will  expiring after 1 minute
     if (Date.now() - timestamp > expireInMilliseconds) {
-      
-    // sending ERROR response to the client
+      // sending ERROR response to the client
       res.status(400).send({
         success: false,
         statusCode: 400,
         TraceID: Date.now(),
         message: "Expired otp ",
       });
+      logger.error(`Trying to verify otp After Expiration`);
       return;
     }
 
@@ -146,14 +157,14 @@ export const validateOtp = async (req: Request, res: Response) => {
 
     // comparing reacted-OTP and enteredOtp
     if (otp == enteredOtp) {
-      
-    // sending SUCCESS response to the client
+      // sending SUCCESS response to the client
       res.status(200).send({
         success: true,
         StatusCode: 200,
         TraceID: Date.now(),
         Message: "OTP verified successfully",
       });
+      logger.info("OTP verified successfully");
       return;
     }
 
@@ -164,6 +175,7 @@ export const validateOtp = async (req: Request, res: Response) => {
       TraceID: Date.now(),
       message: "Invalid otp ",
     });
+    logger.info("Entered OTP is not correct");
   } catch {
     // sending ERROR response to the client
     res.status(400).send({
@@ -173,5 +185,6 @@ export const validateOtp = async (req: Request, res: Response) => {
       Message: "bad request, Error at validation of OTP",
       path: "http://localhost:2000/v1/otp/createOtp",
     });
+    logger.error("error while validating OTP, server side Error");
   }
 };

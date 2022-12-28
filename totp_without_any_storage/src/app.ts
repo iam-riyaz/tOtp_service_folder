@@ -3,7 +3,8 @@ import { otpRouter } from "./routes/otp.Route";
 import { connectDB } from "./config/db";
 import { createServer } from "./utils/server";
 import { errors } from "celebrate";
-// import cors from "cors"
+import { logger } from "./config/logger";
+
 
 dotenv.config();
 const app = createServer();
@@ -22,7 +23,7 @@ app.use(errors());
 // connection to DB and Start the server on port
 connectDB().then(() => {
   app.listen(port, () => {
-    console.log(`listioning on port ${port}`);
+    logger.info(`listioning on port ${port}`);
   });
 });
 

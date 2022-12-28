@@ -43,5 +43,3 @@ var options = {
 
 //attach the plugin to the nodemailer transporter
 transporter.use("compile", hbs(options));
-
-

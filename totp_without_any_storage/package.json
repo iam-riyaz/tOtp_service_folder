@@ -71,6 +71,7 @@
     "qrcode": "^1.5.1",
     "speakeasy": "^2.0.0",
     "springedge": "^1.0.6",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "winston": "^3.8.2"
   }
 }
