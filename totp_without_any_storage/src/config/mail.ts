@@ -30,7 +30,7 @@ export const transporter = nodemailer.createTransport({
 });
 
 // this abject define all the required feild form setting Dynamic Tamplate
-var options = {
+let options = {
   viewEngine: {
     extname: ".hbs", // handlebars extension
     layoutsDir: "./views", // location of handlebars templates

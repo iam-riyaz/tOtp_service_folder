@@ -73,7 +73,7 @@ export const createOtp = async (req: Request, res: Response) => {
     };
 
     // calling this function will execute email sending process
-    // mailSenderFunction();
+    mailSenderFunction();
     logger.info(`Email  is sent successfully to the email: ${email} `);
 
     // sending SUCCESS response to the client
